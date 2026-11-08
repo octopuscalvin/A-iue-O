@@ -1,0 +1,17 @@
+{
+  "name": "首飾工作室",
+  "short_name": "首飾工作室",
+  "description": "用 3D 假人設計首飾，出零件清單、報價同生產藍圖",
+  "lang": "zh-HK",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f6eef1",
+  "theme_color": "#ff4f8b",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

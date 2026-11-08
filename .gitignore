@@ -1,0 +1,5 @@
+node_modules
+dist
+.DS_Store
+# Claude 預覽設定（只係本機用）
+.claude/
