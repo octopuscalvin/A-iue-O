@@ -8,7 +8,7 @@
 
 - 程式碼放喺私人 repo `octopuscalvin/A-iue-O`。
 - 每次 push 去 `main`，GitHub Actions 會自動建置同更新網站，大約要幾分鐘。
-- 網上版**唔包 VRM 模型**，因為佢嘅授權唔准轉發，網上只有「少女」同「基本人台」。想放 VRM 上網，將 `.github/workflows/pages.yml` 入面嘅 `VITE_HAS_VRM: 'false'` 同「移除 VRM 模型檔」嗰步刪咗就得。
+- 網上版**包埋 VRM 模型**（作者本人決定公開）。因為網站係公開，任何人都可以下載到個模型檔。想收返，喺 `.github/workflows/pages.yml` 嘅建置步驟加返 `VITE_HAS_VRM: 'false'`，再加一步 `rm -rf dist/models`。
 - 用手機打開網上版，可以「加至主畫面」當 App 用。
 
 ## 點樣開
