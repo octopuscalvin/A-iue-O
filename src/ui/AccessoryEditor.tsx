@@ -16,7 +16,7 @@ function SpotSetter({ z, spot }: { z: 'earL' | 'earR'; spot: EarSpot }) {
   const placing = useApp((s) => s.placingSpot)
   const setPlacing = useApp((s) => s.setPlacingSpot)
   const reset = useApp((s) => s.resetEarSpots)
-  const src = useBody((s) => s.profile.source)
+  const src = useBody((s) => s.profile.key ?? s.profile.source)
   const hasCustom = useApp((s) => (s.earSpotCustom[src]?.[z] ?? []).some(Boolean))
   useEffect(() => {
     document.body.style.cursor = placing ? 'crosshair' : ''

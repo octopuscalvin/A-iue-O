@@ -17,7 +17,7 @@ export interface Snapshot {
   version: 1
   rings: Partial<Record<RingZone, RingDesign>>
   acc: Partial<Record<AccZone, AccDesign>>
-  mannequin: { style: BodyStyle; figure: Figure; vrmLook: VrmLook; vrmClothes: boolean; vrmSizing: VrmSizing; wardrobe?: Wardrobe; outfitColors?: Record<string, string> }
+  mannequin: { style: BodyStyle; figure: Figure; vrmLook: VrmLook; vrmClothes: boolean; vrmSizing: VrmSizing; vrmModel?: string; wardrobe?: Wardrobe; outfitColors?: Record<string, string> }
 }
 
 export interface Project {
@@ -34,7 +34,7 @@ export function takeSnapshot(): Snapshot {
     version: 1,
     rings: structuredClone(useDesigns.getState().designs),
     acc: structuredClone(useAcc.getState().designs),
-    mannequin: { style: a.style, figure: a.figure, vrmLook: a.vrmLook, vrmClothes: a.vrmClothes, vrmSizing: a.vrmSizing, wardrobe: a.wardrobe, outfitColors: a.outfitColors },
+    mannequin: { style: a.style, figure: a.figure, vrmLook: a.vrmLook, vrmClothes: a.vrmClothes, vrmSizing: a.vrmSizing, vrmModel: a.vrmModel, wardrobe: a.wardrobe, outfitColors: a.outfitColors },
   }
 }
 
@@ -45,7 +45,7 @@ export function applySnapshot(s: Snapshot) {
   useDesigns.setState({ designs: structuredClone(s.rings ?? {}), selected: null })
   useAcc.setState({ designs: structuredClone(s.acc ?? {}), selected: null })
   const m = s.mannequin
-  if (m) useApp.setState({ style: m.style, figure: m.figure, vrmLook: m.vrmLook, vrmClothes: m.vrmClothes, vrmSizing: m.vrmSizing, wardrobe: m.wardrobe ?? {}, outfitColors: m.outfitColors ?? {} })
+  if (m) useApp.setState({ style: m.style, figure: m.figure, vrmLook: m.vrmLook, vrmClothes: m.vrmClothes, vrmSizing: m.vrmSizing, vrmModel: m.vrmModel ?? 'sample', wardrobe: m.wardrobe ?? {}, outfitColors: m.outfitColors ?? {} })
   useApp.getState().setZone('full')
 }
 

@@ -17,7 +17,7 @@ const ZERO: V3 = [0, 0, 0]
 
 export function useEarSpots(zone: 'earL' | 'earR'): V3[] {
   const profile = useBody((s) => s.profile)
-  const custom = useApp((s) => s.earSpotCustom[profile.source]?.[zone])
+  const custom = useApp((s) => s.earSpotCustom[profile.key ?? profile.source]?.[zone])
   return [0, 1, 2].map((i) => custom?.[i] ?? profile.earSpots?.[zone]?.[i] ?? ZERO)
 }
 
@@ -63,7 +63,8 @@ export function placeEarSpot(e: ThreeEvent<PointerEvent>, sockets: Map<string, T
   const local = sock.worldToLocal(e.point.clone())
   local.x -= 0.0015 * side // 向內少少：耳針穿過耳仔
   const v = local.toArray() as V3
-  const src = useBody.getState().profile.source
+  const prof = useBody.getState().profile
+  const src = prof.key ?? prof.source
   app.setEarSpot(src, zone, n - 1, v)
   app.setEarSpot(src, zone === 'earL' ? 'earR' : 'earL', n - 1, [-v[0], v[1], v[2]])
   const d = useAcc.getState().designs[zone]

@@ -10,7 +10,7 @@ export type VrmLook = 'original' | 'mannequin'
 export type VrmSizing = 'standard' | 'model'
 type V3 = [number, number, number]
 /** 用家自己撳耳仔設定嘅 ①②③ 位置（相對耳掛點，米）；分開程式假人同 VRM */
-export type EarSpotCustom = Partial<Record<'procedural' | 'vrm', Partial<Record<'earL' | 'earR', (V3 | null)[]>>>>
+export type EarSpotCustom = Partial<Record<string, Partial<Record<'earL' | 'earR', (V3 | null)[]>>>>
 
 interface AppState {
   style: BodyStyle
@@ -24,6 +24,8 @@ interface AppState {
   vrmLook: VrmLook
   vrmClothes: boolean
   vrmSizing: VrmSizing
+  /** 揀咗邊個 VRM 模型（見 body/vrmModels） */
+  vrmModel: string
   earSpotCustom: EarSpotCustom
   /** 少女假人着緊嘅衣服（DLC） */
   wardrobe: Wardrobe
@@ -38,8 +40,9 @@ interface AppState {
   setVrmLook: (l: VrmLook) => void
   toggleVrmClothes: () => void
   setVrmSizing: (v: VrmSizing) => void
-  setEarSpot: (src: 'procedural' | 'vrm', zone: 'earL' | 'earR', i: number, v: V3 | null) => void
-  resetEarSpots: (src: 'procedural' | 'vrm') => void
+  setVrmModel: (id: string) => void
+  setEarSpot: (src: string, zone: 'earL' | 'earR', i: number, v: V3 | null) => void
+  resetEarSpots: (src: string) => void
   setPlacingSpot: (n: 1 | 2 | 3 | null) => void
   setOutfit: (slot: OutfitSlot, id: string | null) => void
   setOutfitColor: (id: string, color: string) => void
@@ -83,6 +86,8 @@ export const useApp = create<AppState>()(
       toggleVrmClothes: () => set((s) => ({ vrmClothes: !s.vrmClothes })),
       vrmSizing: 'standard',
       setVrmSizing: (vrmSizing) => set({ vrmSizing }),
+      vrmModel: 'sample',
+      setVrmModel: (vrmModel) => set({ vrmModel, zone: 'full' }),
       earSpotCustom: {},
       placingSpot: null,
       setEarSpot: (src, zone, i, v) =>
@@ -116,7 +121,7 @@ export const useApp = create<AppState>()(
       name: 'jewelry-atelier',
       storage: createJSONStorage(storageBackend),
       // 只記低假人設定，唔記鏡頭位置
-      partialize: (s) => ({ style: s.style, figure: s.figure, vrmLook: s.vrmLook, vrmClothes: s.vrmClothes, vrmSizing: s.vrmSizing, earSpotCustom: s.earSpotCustom, wardrobe: s.wardrobe, outfitColors: s.outfitColors }),
+      partialize: (s) => ({ style: s.style, figure: s.figure, vrmLook: s.vrmLook, vrmClothes: s.vrmClothes, vrmSizing: s.vrmSizing, vrmModel: s.vrmModel, earSpotCustom: s.earSpotCustom, wardrobe: s.wardrobe, outfitColors: s.outfitColors }),
     },
   ),
 )

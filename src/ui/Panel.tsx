@@ -4,6 +4,7 @@ import { cameraApi } from '../scene/Stage'
 import { FIGURE_RANGE, type Figure } from '../body/figure'
 import { girthOf, useBody } from '../body/bodyProfile'
 import { HAS_VRM } from '../body/VrmMannequin'
+import { VRM_MODELS } from '../body/vrmModels'
 import { OUTFITS, OUTFIT_MAP, SLOT_LABEL, SLOT_ORDER } from '../body/outfits'
 
 const STYLES: { id: BodyStyle; label: string; hint: string }[] = [
@@ -48,6 +49,14 @@ export function Panel() {
         </div>
         {vrm && (
           <div className="vrm-opts">
+            <div className="fit vrm-size">
+              <span>模型</span>
+              <div className="seg small" style={{ gridTemplateColumns: `repeat(${VRM_MODELS.length}, 1fr)` }}>
+                {VRM_MODELS.map((m) => (
+                  <button key={m.id} className={s.vrmModel === m.id ? 'on' : ''} onClick={() => s.setVrmModel(m.id)}>{m.name}</button>
+                ))}
+              </div>
+            </div>
             <div className="seg small two">
               <button className={s.vrmLook === 'mannequin' ? 'on' : ''} onClick={() => s.setVrmLook('mannequin')}>人台質感</button>
               <button className={s.vrmLook === 'original' ? 'on' : ''} onClick={() => s.setVrmLook('original')}>原本樣貌</button>

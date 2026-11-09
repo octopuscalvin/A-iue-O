@@ -40,7 +40,12 @@ npm run dev
 
 ## VRM 模型假人
 
-「假人風格」揀「VRM」，就會載入 `public/models/sample-mannequin.vrm`（由 `Sample Manequein.vrm` 複製過嚟）。第一次載入大約要 10 至 15 秒。
+「假人風格」揀「VRM」，再喺「模型」揀用邊個：
+
+- **Sample Manequein**：`public/models/sample-mannequin.vrm`
+- **ありさ**：`public/models/arisa.vrm`（作者 Octo，授權容許轉發同修改）
+
+第一次載入大約要 10 至 30 秒。每個模型會分開量度，亦會分開記住自己嘅耳仔 ①②③ 位置。
 
 - **自動縮放到 160cm**，雙手由 T-pose 放低；揀手腕時會舉起隻手。頭髮有物理效果，會跟住郁。
 - **外觀**：
@@ -53,7 +58,7 @@ npm run dev
   - 「跟模型」：用模型實際量度，戴喺模型上面最貼身。
 - 呢個模型係動漫比例，手腕只有約 10.7cm，比真人（約 15cm）幼好多，所以跟模型做嘅首飾，真人會戴唔落。
 - 頸鏈會根據模型嘅身體表面（膊頭高度、心口前面）自動垂落。
-- **換第二個 VRM**：用新檔案取代 `public/models/sample-mannequin.vrm` 就得。模型要用 VRM 1.0 格式、人形骨架。
+- **加新 VRM 模型**：將 .vrm 檔放入 `public/models/`，再喺 `src/body/vrmModels.ts` 加一行。模型要用 VRM 1.0 格式、人形骨架。
 - 暫時唔支援：三圍調校、專注模式、顯示骨架（呢幾個功能只限程式生成嘅假人）。
 
 > 授權：呢個 VRM 嘅授權設定係「只限作者、非牟利、唔准修改、唔准轉發」。如果將來要商業使用，請喺 VRoid Studio 重新匯出，並改成容許商業使用嘅授權。

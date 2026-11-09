@@ -12,6 +12,8 @@ import { ZONES, type ZoneId } from './zones'
  */
 export interface BodyProfile {
   source: 'procedural' | 'vrm'
+  /** 用嚟分開記住每個假人自己嘅設定（程式假人 = 'procedural'；VRM = 每個模型一個） */
+  key?: string
   /** 身高（cm） */
   heightCm: number
   /** 各部位圍度（cm）：首飾尺寸用呢個 */

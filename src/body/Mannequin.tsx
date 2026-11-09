@@ -426,13 +426,14 @@ function ProceduralMannequin({ style }: { style: ProcStyle }) {
 
 export function Mannequin() {
   const style = useApp((s) => s.style)
+  const vrmModelId = useApp((s) => s.vrmModel)
   usePoseAnimation()
   return (
     // 設定耳仔位置模式：撳身體表面就設定（見 earSpots）
     <group onPointerDown={(e) => placeEarSpot(e, socketObjects as Map<string, THREE.Object3D>)}>
       {style === 'vrm' ? (
         <Suspense fallback={<LoadingNote />}>
-          <VrmMannequin />
+          <VrmMannequin key={vrmModelId} modelId={vrmModelId} />
         </Suspense>
       ) : (
         <ProceduralMannequin style={style} />

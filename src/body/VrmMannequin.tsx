@@ -11,6 +11,7 @@ import { proceduralProfile, setProfile, type BodyProfile } from './bodyProfile'
 import { buildSurface, type BodySurface } from './surface'
 import { DEFAULT_FIGURE } from './figure'
 import { rig, Socket } from './Mannequin'
+import { vrmModel, vrmUrl } from './vrmModels'
 
 /**
  * VRM 模型假人（例如由 VRoid Studio 匯出）。
@@ -19,7 +20,6 @@ import { rig, Socket } from './Mannequin'
  * - 掛點跟住模型骨頭
  * - 載入時直接量度模型：手腕、腳腕、上臂、頸嘅圍度，同軀幹形狀（頸鏈貼身用）
  */
-export const VRM_URL = `${import.meta.env.BASE_URL}models/sample-mannequin.vrm`
 /** 網上版可以唔包 VRM（授權：唔准轉發），發佈時設定 VITE_HAS_VRM=false */
 export const HAS_VRM = import.meta.env.VITE_HAS_VRM !== 'false'
 const TARGET_HEIGHT = 1.6
@@ -354,8 +354,8 @@ const mannequinSkin = new THREE.MeshStandardMaterial({ color: '#ebe5e7', roughne
 const mannequinHair = new THREE.MeshStandardMaterial({ color: '#d6cdd2', roughness: 0.5, side: THREE.DoubleSide })
 const mannequinCloth = new THREE.MeshStandardMaterial({ color: '#f3d4df', roughness: 0.85, side: THREE.DoubleSide })
 
-export function VrmMannequin() {
-  const gltf = useLoader(GLTFLoader, VRM_URL, (loader) => {
+export function VrmMannequin({ modelId }: { modelId: string }) {
+  const gltf = useLoader(GLTFLoader, vrmUrl(modelId), (loader) => {
     loader.register((parser) => new VRMLoaderPlugin(parser))
   })
   const s = useMemo(() => setup(gltf.userData.vrm as VRM), [gltf])
@@ -402,6 +402,7 @@ export function VrmMannequin() {
     const standard = proceduralProfile(DEFAULT_FIGURE).girthCm
     setProfile({
       ...s.profile,
+      key: vrmModel(modelId).key,
       girthCm: sizing === 'model' ? s.profile.measuredGirthCm : standard,
       // 收埋衣服時，頸鏈就貼住皮膚
       surface: clothes ? s.surfaces.clothed : s.surfaces.skin,
