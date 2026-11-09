@@ -5,14 +5,52 @@ import * as THREE from 'three'
  * - swatch：介面上色板嘅顏色
  * - density：密度 (g/cm³)，用嚟計首飾重量
  */
-export type MaterialCategory = 'metal' | 'plastic' | 'fabric' | 'lace'
+export type MaterialCategory = 'metal' | 'plastic' | 'silicone' | 'fabric' | 'cotton' | 'leather' | 'lace' | 'gem'
 
 export const CATEGORY_LABEL: Record<MaterialCategory, string> = {
   metal: '金屬',
   plastic: '塑膠',
+  silicone: '矽膠',
   fabric: '布料',
+  cotton: '棉繩',
+  leather: '皮革',
   lace: '蕾絲',
+  gem: '寶石',
 }
+
+/** 閃粉膠：用程式畫細閃點做 roughness / 顏色貼圖 */
+let glitterTex: THREE.Texture | null = null
+function glitterTexture() {
+  if (glitterTex) return glitterTex
+  const c = document.createElement('canvas')
+  c.width = c.height = 256
+  const g = c.getContext('2d')!
+  g.fillStyle = '#c8c8c8'
+  g.fillRect(0, 0, 256, 256)
+  for (let i = 0; i < 1400; i++) {
+    const v = 200 + Math.floor(Math.random() * 55)
+    g.fillStyle = `rgb(${v},${v},${v})`
+    g.fillRect(Math.random() * 256, Math.random() * 256, 1.5, 1.5)
+  }
+  glitterTex = new THREE.CanvasTexture(c)
+  glitterTex.wrapS = glitterTex.wrapT = THREE.RepeatWrapping
+  glitterTex.repeat.set(6, 6)
+  return glitterTex
+}
+const glitter = (color: string) => () =>
+  new THREE.MeshPhysicalMaterial({
+    color, map: glitterTexture(), roughness: 0.25, metalness: 0.35, clearcoat: 1, clearcoatRoughness: 0.05,
+    iridescence: 0.5, iridescenceIOR: 1.4,
+  })
+const silicone = (color: string) => phys({ color, roughness: 0.75, sheen: 0.3, sheenColor: new THREE.Color('#ffffff') })
+const cotton = (color: string) => phys({ color, roughness: 0.95, sheen: 0.5, sheenColor: new THREE.Color(color).lerp(new THREE.Color('#ffffff'), 0.5) })
+const leather = (color: string) => phys({ color, roughness: 0.55, clearcoat: 0.35, clearcoatRoughness: 0.5 })
+/** 寶石：高折射、透光、切面 */
+const gem = (color: string) => () =>
+  new THREE.MeshPhysicalMaterial({
+    color, roughness: 0, metalness: 0, transmission: 0.95, thickness: 0.003, ior: 2.2,
+    clearcoat: 1, iridescence: 0.3, flatShading: true,
+  })
 
 export interface MaterialPreset {
   id: string
@@ -101,6 +139,38 @@ export const MATERIALS: MaterialPreset[] = [
   { id: 'lace_white', name: '白蕾絲', category: 'lace', swatch: '#ffffff', density: 0.35, make: lace('#ffffff') },
   { id: 'lace_pink', name: '粉紅蕾絲', category: 'lace', swatch: '#ffc8da', density: 0.35, make: lace('#ffc8da') },
   { id: 'lace_black', name: '黑蕾絲', category: 'lace', swatch: '#2a2530', density: 0.35, make: lace('#2a2530') },
+  // 閃粉膠（塑膠）
+  { id: 'glitter_pink', name: '粉紅閃粉', category: 'plastic', swatch: '#ff9cc2', density: 1.19, make: glitter('#ff9cc2') },
+  { id: 'glitter_silver', name: '銀閃粉', category: 'plastic', swatch: '#dfe3ea', density: 1.19, make: glitter('#e6e9ef') },
+  { id: 'glitter_lavender', name: '紫閃粉', category: 'plastic', swatch: '#cdb6ff', density: 1.19, make: glitter('#cdb6ff') },
+  // 矽膠（軟身手環）
+  { id: 'sil_pink', name: '矽膠粉紅', category: 'silicone', swatch: '#f7a8c4', density: 1.15, make: silicone('#f7a8c4') },
+  { id: 'sil_mint', name: '矽膠薄荷', category: 'silicone', swatch: '#a8e6d2', density: 1.15, make: silicone('#a8e6d2') },
+  { id: 'sil_lavender', name: '矽膠紫', category: 'silicone', swatch: '#c9b5f2', density: 1.15, make: silicone('#c9b5f2') },
+  { id: 'sil_yellow', name: '矽膠黃', category: 'silicone', swatch: '#ffe08a', density: 1.15, make: silicone('#ffe08a') },
+  { id: 'sil_black', name: '矽膠黑', category: 'silicone', swatch: '#2b2a30', density: 1.15, make: silicone('#2b2a30') },
+  { id: 'sil_white', name: '矽膠白', category: 'silicone', swatch: '#f6f6f6', density: 1.15, make: silicone('#f6f6f6') },
+  // 棉繩（編織手繩）
+  { id: 'cot_white', name: '白棉繩', category: 'cotton', swatch: '#f7f4ee', density: 0.5, make: cotton('#f7f4ee') },
+  { id: 'cot_pink', name: '粉紅棉繩', category: 'cotton', swatch: '#f4a6c0', density: 0.5, make: cotton('#f4a6c0') },
+  { id: 'cot_red', name: '紅棉繩', category: 'cotton', swatch: '#d8344f', density: 0.5, make: cotton('#d8344f') },
+  { id: 'cot_mint', name: '薄荷棉繩', category: 'cotton', swatch: '#8fd9c3', density: 0.5, make: cotton('#8fd9c3') },
+  { id: 'cot_yellow', name: '黃棉繩', category: 'cotton', swatch: '#ffd75e', density: 0.5, make: cotton('#ffd75e') },
+  { id: 'cot_sky', name: '天藍棉繩', category: 'cotton', swatch: '#8cc8f0', density: 0.5, make: cotton('#8cc8f0') },
+  { id: 'cot_navy', name: '深藍棉繩', category: 'cotton', swatch: '#2e3d6b', density: 0.5, make: cotton('#2e3d6b') },
+  // 皮革
+  { id: 'lea_brown', name: '啡色皮', category: 'leather', swatch: '#7a4a2b', density: 0.9, make: leather('#7a4a2b') },
+  { id: 'lea_tan', name: '淺啡皮', category: 'leather', swatch: '#c08a5a', density: 0.9, make: leather('#c08a5a') },
+  { id: 'lea_black', name: '黑皮', category: 'leather', swatch: '#1f1b1d', density: 0.9, make: leather('#1f1b1d') },
+  { id: 'lea_pink', name: '粉紅皮', category: 'leather', swatch: '#e8a3b8', density: 0.9, make: leather('#e8a3b8') },
+  { id: 'lea_white', name: '白皮', category: 'leather', swatch: '#f2ede6', density: 0.9, make: leather('#f2ede6') },
+  // 寶石（鋯石 / 水晶）
+  { id: 'gem_clear', name: '白鑽', category: 'gem', swatch: '#f4f8ff', clear: true, density: 5.7, make: gem('#ffffff') },
+  { id: 'gem_pink', name: '粉紅鑽', category: 'gem', swatch: '#ff9cc2', clear: true, density: 5.7, make: gem('#ff8fbb') },
+  { id: 'gem_sky', name: '海藍', category: 'gem', swatch: '#9fd6ff', clear: true, density: 5.7, make: gem('#8fd0ff') },
+  { id: 'gem_emerald', name: '祖母綠', category: 'gem', swatch: '#3ccf8e', clear: true, density: 5.7, make: gem('#33c48a') },
+  { id: 'gem_ruby', name: '紅寶石', category: 'gem', swatch: '#e0244f', clear: true, density: 5.7, make: gem('#e0244f') },
+  { id: 'gem_amethyst', name: '紫水晶', category: 'gem', swatch: '#a66bff', clear: true, density: 5.7, make: gem('#a66bff') },
 ]
 
 export const MATERIAL_MAP = Object.fromEntries(MATERIALS.map((m) => [m.id, m])) as Record<string, MaterialPreset>

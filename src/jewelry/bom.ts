@@ -1,7 +1,7 @@
 import { MATERIAL_MAP, isMetal } from '../materials/library'
 import type { PricedRow, PriceKey } from './pricing'
 import { SHAPE_VOLUME } from './charms'
-import { BASES, JEWELRY, SHAPES, centerLengthMm, innerLengthCm, isThreaded, type CharmSpec, type RingDesign, type RingZone } from './types'
+import { BASES, JEWELRY, SHAPES, centerLengthMm, innerLengthCm, isThreaded, type BaseOption, type CharmSpec, type RingDesign, type RingZone } from './types'
 
 /**
  * 零件清單（BOM）同重量估算。全部用真實尺寸（mm）計。
@@ -25,6 +25,12 @@ export interface Bom {
 /** 鏈圈尺寸（mm）：線徑 w */
 export const chainLink = (w: number) => ({ R: 1.6 * w, r: w / 2, stretch: 1.35, pitch: 2 * 1.1 * w * 1.35 })
 export const chainLinkCount = (centerMm: number, w: number) => Math.max(8, 2 * Math.round(centerMm / chainLink(w).pitch / 2))
+
+/** 底座選項嘅文字（例如「O字鏈」「光面」） */
+export function variantLabel(d: RingDesign) {
+  const o = BASES[d.base.type].options?.find((x) => x.kind === 'variant') as Extract<BaseOption, { kind: 'variant' }> | undefined
+  return o?.choices.find((c) => c.id === (d.base.variant ?? o.def))?.label ?? ''
+}
 
 /** 珠串：邊幾粒珠要讓位畀穿入去嘅配件珠 */
 export function beadSlots(d: RingDesign, centerMm: number) {
@@ -73,18 +79,83 @@ export function computeBom(d: RingDesign, zone: RingZone, girthCm: number): Bom 
     case 'chain': {
       const n = chainLinkCount(center, t)
       const L = chainLink(t)
-      rows.push({ part: 'O字鏈', spec: `線徑 ${t.toFixed(1)}mm · 長 ${(inner * 10).toFixed(0)}mm（${n} 個鏈圈）`, qty: 1, material: name(m), weightG: gram(n * torusVol(L.R, L.r) * L.stretch, m), price: pr('chain', per10cm(inner * 10)) })
+      rows.push({ part: variantLabel(d) || 'O字鏈', spec: `線徑 ${t.toFixed(1)}mm · 長 ${(inner * 10).toFixed(0)}mm（${n} 個鏈圈）`, qty: 1, material: name(m), weightG: gram(n * torusVol(L.R, L.r) * L.stretch, m), price: pr('chain', per10cm(inner * 10)) })
       break
     }
     case 'beads': {
       const { keep } = beadSlots(d, center)
       const v = (4 / 3) * Math.PI * (t / 2) ** 3
-      rows.push({ part: '底珠', spec: `直徑 ${t}mm`, qty: keep.length, material: name(m), weightG: gram(v * keep.length, m), price: pr(isMetal(m) || m === 'pearl' ? 'bead_premium' : 'bead_plastic', keep.length) })
+      const letters = (d.base.text ?? '').replace(/\s+/g, '').length
+      const plain = Math.max(0, keep.length - letters)
+      const key = d.base.variant === 'faceted' ? 'bead_crystal' : isMetal(m) || m === 'pearl' ? 'bead_premium' : 'bead_plastic'
+      rows.push({ part: `底珠（${variantLabel(d) || '圓珠'}）`, spec: `${t}mm`, qty: plain, material: name(m), weightG: gram(v * plain, m), price: pr(key, plain) })
+      if (letters) rows.push({ part: '字母珠', spec: `${t}mm 方珠 · 「${(d.base.text ?? '').toUpperCase()}」`, qty: letters, material: '亞克力', weightG: gram(t ** 3 * 0.7 * letters, 'gloss_white'), price: pr('letter_bead', letters) })
       rows.push({ part: '彈性水晶線', spec: `0.8mm · 長 ${(inner * 10 + 40).toFixed(0)}mm（連打結位）`, qty: 1, material: '彈性線', weightG: 0.1, price: pr('elastic', 1) })
       break
     }
     case 'bangle':
       rows.push({ part: JEWELRY[zone].baseText?.bangle?.label ?? '手鐲', spec: `粗 ${t}mm · 內圈 ${(inner * 10).toFixed(0)}mm`, qty: 1, material: name(m), weightG: gram(center * Math.PI * (t / 2) ** 2, m), price: pr(isMetal(m) ? 'bangle_metal' : 'bangle_plastic', 1) })
+      break
+    case 'idchain': {
+      const n = chainLinkCount(center, t)
+      const L = chainLink(t)
+      const W = d.base.widthMm ?? 30
+      const text = (d.base.text ?? '').toUpperCase()
+      rows.push({ part: '側身鏈', spec: `線徑 ${t.toFixed(1)}mm · 長 ${(inner * 10 - W).toFixed(0)}mm`, qty: 1, material: name(m), weightG: gram(n * torusVol(L.R, L.r) * L.stretch * 0.85, m), price: pr('chain', per10cm(inner * 10 - W)) })
+      rows.push({ part: '名牌', spec: `${W} × 8 × 1.3mm`, qty: 1, material: name(m), weightG: gram(W * 8 * 1.3, m), price: pr('id_plate', 1) })
+      if (text) rows.push({ part: '刻字', spec: `「${text}」`, qty: text.length, material: '雷射 / 手刻', weightG: 0, price: pr('engrave', text.length) })
+      rows.push({ part: '開口圈', spec: '4mm（名牌兩邊）', qty: 2, material: name(m), weightG: gram(2 * torusVol(1.65, 0.35), m), price: pr('ring_small', 2) })
+      break
+    }
+    case 'tennis': {
+      const n = Math.max(10, Math.floor(center / (t * 1.12)))
+      const gm = d.base.gem ?? 'gem_clear'
+      rows.push({ part: '寶石', spec: `${t}mm 圓形明亮式`, qty: n, material: name(gm), weightG: gram(n * 0.35 * t ** 3, gm), price: pr('gem_set', n) })
+      rows.push({ part: '鑲座鏈', spec: `${n} 個爪鑲 · 長 ${(inner * 10).toFixed(0)}mm`, qty: 1, material: name(m), weightG: gram(n * t * t * 0.35, m), price: pr('chain', per10cm(inner * 10)) })
+      break
+    }
+    case 'spiral': {
+      const turns = d.base.count ?? 3
+      const len = center * turns
+      const n = Math.floor(len / t)
+      const bm = d.base.colors?.[0] ?? 'jelly_pink'
+      rows.push({ part: '記憶鋼線', spec: `0.7mm · ${turns} 圈`, qty: 1, material: name(m), weightG: gram(len * 0.38, m), price: pr('memory_wire', turns) })
+      rows.push({ part: '珠', spec: `${t}mm`, qty: n, material: name(bm), weightG: gram(n * (4 / 3) * Math.PI * (t / 2) ** 3, bm), price: pr(isMetal(bm) ? 'bead_premium' : 'bead_plastic', n) })
+      rows.push({ part: '鋼線尾珠', spec: '2.5mm', qty: 2, material: name(m), weightG: gram(2 * 8, m), price: pr('end_cap', 2) })
+      break
+    }
+    case 'hardband':
+    case 'cuff':
+    case 'silicone':
+    case 'strap': {
+      const W = d.base.widthMm ?? 12
+      const label = { hardband: '硬膠手環', cuff: '開口手鐲', silicone: '矽膠手環', strap: '皮帶' }[d.base.type]
+      const surface = variantLabel(d)
+      const len = d.base.type === 'cuff' ? center - 25 : d.base.type === 'strap' ? center + 40 : center
+      const key = d.base.type === 'hardband' ? 'hardband' : d.base.type === 'silicone' ? 'silicone_band' : d.base.type === 'strap' ? 'strap_band' : isMetal(m) ? 'cuff_metal' : 'cuff_plastic'
+      rows.push({
+        part: label, spec: `闊 ${W}mm · 厚 ${t}mm${surface ? ` · ${surface}` : ''} · ${d.base.type === 'cuff' ? `開口 25mm` : `內圈 ${(inner * 10).toFixed(0)}mm`}`,
+        qty: 1, material: name(m), weightG: gram(len * W * t * 0.85, m), price: pr(key, 1),
+      })
+      if (d.base.type === 'silicone' && d.base.text) rows.push({ part: '凹字', spec: `「${d.base.text.toUpperCase()}」`, qty: d.base.text.length, material: '模具', weightG: 0, price: pr('engrave', d.base.text.length * 0.5) })
+      if (d.base.type === 'strap') rows.push({ part: '皮帶扣', spec: `${W}mm`, qty: 1, material: name(claspMaterial(d)), weightG: gram(W * 20, claspMaterial(d)), price: pr('buckle', 1) })
+      break
+    }
+    case 'braided': {
+      const cols = d.base.colors?.length ? d.base.colors : [m, m, m]
+      cols.forEach((c, i) => rows.push({ part: `棉繩 第 ${i + 1} 股`, spec: `${(t * 0.6).toFixed(1)}mm · 長 ${(inner * 10 * 1.15 + 150).toFixed(0)}mm（連結尾）`, qty: 1, material: name(c), weightG: gram(inner * 10 * 1.15 * (t * 0.3) ** 2 * Math.PI, c), price: pr('braid_cord', per10cm(inner * 10 * 1.15 + 150)) }))
+      rows.push({ part: '尾珠', spec: `${(t * 1.4).toFixed(1)}mm`, qty: 2, material: name(cols[2 % cols.length]), weightG: 0.2, price: pr('bead_plastic', 2) })
+      break
+    }
+    case 'wrap': {
+      const turns = d.base.count ?? 2
+      const len = center * turns + 20
+      rows.push({ part: '皮繩', spec: `粗 ${t}mm · 長 ${len.toFixed(0)}mm（${turns} 圈）`, qty: 1, material: name(m), weightG: gram(len * Math.PI * (t / 2) ** 2, m), price: pr('leather_cord', per10cm(len)) })
+      rows.push({ part: '按扣', spec: `${(t * 1.7).toFixed(0)}mm`, qty: 1, material: name(claspMaterial(d)), weightG: gram(40, claspMaterial(d)), price: pr('snap', 1) })
+      break
+    }
+    case 'scrunchie':
+      rows.push({ part: '髮圈手圈', spec: `粗 ${t}mm · 布長 ${(center * 1.8).toFixed(0)}mm + 橡筋`, qty: 1, material: name(m), weightG: gram(center * 1.8 * t * 0.4, m), price: pr('scrunchie', 1) })
       break
     case 'cord':
       rows.push({ part: '絲絨繩', spec: `粗 ${t}mm · 長 ${(inner * 10).toFixed(0)}mm`, qty: 1, material: name(m), weightG: gram(center * Math.PI * (t / 2) ** 2, m), price: pr('cord', per10cm(inner * 10)) })

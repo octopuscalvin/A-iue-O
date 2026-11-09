@@ -10,6 +10,74 @@ import {
   type RingZone,
 } from '../jewelry/types'
 
+/** 每款底座自己嘅選項（款式、闊度、圈數、刻字、顏色、寶石） */
+function BaseOptions({ z }: { z: RingZone }) {
+  const st = useDesigns()
+  const d = st.designs[z]
+  if (!d) return null
+  const b = d.base
+  return (
+    <>
+      {(BASES[b.type].options ?? []).map((o, i) => {
+        switch (o.kind) {
+          case 'variant':
+            return (
+              <div key={i} className="opt">
+                <span>{o.label}</span>
+                <div className="chips small">
+                  {o.choices.map((c) => (
+                    <button key={c.id} className={`chip ${(b.variant ?? o.def) === c.id ? 'on' : ''}`} onClick={() => st.setBase(z, { variant: c.id })}>{c.label}</button>
+                  ))}
+                </div>
+              </div>
+            )
+          case 'width':
+            return <Slider key={i} label={o.label} min={o.min} max={o.max} step={o.step} value={b.widthMm ?? o.def} unit="mm" onChange={(v) => st.setBase(z, { widthMm: v })} />
+          case 'count':
+            return <Slider key={i} label={o.label} min={o.min} max={o.max} step={1} value={b.count ?? o.def} unit={o.unit} onChange={(v) => st.setBase(z, { count: v })} />
+          case 'text':
+            return (
+              <label key={i} className="opt text">
+                <span>{o.label}</span>
+                <input
+                  value={b.text ?? ''} maxLength={o.maxLen} placeholder={o.placeholder}
+                  onChange={(e) => st.setBase(z, { text: e.target.value.replace(/[^ -~]/g, '') })}
+                />
+              </label>
+            )
+          case 'colors':
+            return (
+              <div key={i} className="opt">
+                <span>{o.label}</span>
+                {Array.from({ length: o.n }, (_, k) => (
+                  <div key={k} className="opt-color">
+                    {o.n > 1 && <small>第 {k + 1} 股</small>}
+                    <Swatches
+                      categories={o.categories}
+                      value={b.colors?.[k] ?? o.def[k]}
+                      onChange={(m) => {
+                        const next = [...(b.colors ?? o.def)]
+                        next[k] = m
+                        st.setBase(z, { colors: next })
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            )
+          case 'gem':
+            return (
+              <div key={i} className="opt">
+                <span>{o.label}</span>
+                <Swatches categories={['gem']} value={b.gem ?? o.def} onChange={(m) => st.setBase(z, { gem: m })} />
+              </div>
+            )
+        }
+      })}
+    </>
+  )
+}
+
 /** 部位圍度嘅叫法 */
 const GIRTH_NAME: Record<string, string> = { bracelet: '手腕', anklet: '腳腕', armlet: '上臂', necklace: '頸圍' }
 
@@ -65,19 +133,29 @@ export function JewelryEditor() {
 
       <section>
         <h2>① 底座</h2>
-        <div className="chips">
-          {j.bases.map((t) => (
-            <button key={t} className={`chip ${d.base.type === t ? 'on' : ''}`} onClick={() => st.setBaseType(z, t)} title={baseHint(z, t)}>
-              {baseLabel(z, t)}
-            </button>
-          ))}
-        </div>
+        {(['鏈', '珠', '硬身', '繩帶'] as const).map((g) => {
+          const list = j.bases.filter((t) => BASES[t].group === g)
+          if (!list.length) return null
+          return (
+            <div key={g} className="base-group">
+              <span>{g}</span>
+              <div className="chips">
+                {list.map((t) => (
+                  <button key={t} className={`chip ${d.base.type === t ? 'on' : ''}`} onClick={() => st.setBaseType(z, t)} title={baseHint(z, t)}>
+                    {baseLabel(z, t)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )
+        })}
         <p className="hint">{baseHint(z, d.base.type)}</p>
         <Swatches categories={base.categories} value={d.base.material} onChange={(m) => st.setBase(z, { material: m })} />
         <Slider
           label={base.thick.label} min={base.thick.min} max={base.thick.max} step={base.thick.step}
           value={d.base.thickMm} unit="mm" onChange={(v) => st.setBase(z, { thickMm: v })}
         />
+        <BaseOptions z={z} />
         <div className="fit">
           <span>{isNeck ? '長度' : '鬆緊'}</span>
           <div className="seg small" style={{ gridTemplateColumns: `repeat(${Object.keys(j.fits).length}, 1fr)` }}>

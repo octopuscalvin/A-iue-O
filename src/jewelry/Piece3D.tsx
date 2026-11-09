@@ -1,13 +1,14 @@
-import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
 import * as THREE from 'three'
 import { girthOf, useBody } from '../body/bodyProfile'
 import { material } from '../materials/library'
-import { beadSlots, chainLink, chainLinkCount, claspMaterial, jumpRingMaterial } from './bom'
+import { claspMaterial, jumpRingMaterial } from './bom'
 import { SHAPE_GEO, SHAPE_HALF_H } from './charms'
 import { useDesigns } from './designStore'
 import { makeRing, type Ring } from './ring'
-import { BASES, centerLengthMm, isThreaded, type CharmSpec, type RingDesign, type RingZone } from './types'
+import { BASES, JEWELRY, baseOutMm, centerLengthMm, isThreaded, type CharmSpec, type RingDesign, type RingZone } from './types'
+import { BandBase, BeadsBase, BraidedBase, ChainBase, IdChainBase, ScrunchieBase, SpiralBase, TennisBase, WrapBase, frameAtU, frameQuat } from './Bases3D'
 
 const MM = 0.001
 const UP = new THREE.Vector3(0, 1, 0)
@@ -22,50 +23,6 @@ function frameAt(ring: Ring, t: number, q: THREE.Quaternion, p: THREE.Vector3) {
 }
 
 // ---------------- 底座 ----------------
-
-function Chain({ d, ring }: { d: RingDesign; ring: Ring }) {
-  const ref = useRef<THREE.InstancedMesh>(null)
-  const w = d.base.thickMm
-  const L = chainLink(w)
-  const n = chainLinkCount(ring.length / MM, w)
-  const geo = useMemo(() => new THREE.TorusGeometry(L.R * MM, L.r * MM, 8, 20), [L.R, L.r])
-  useEffect(() => () => geo.dispose(), [geo])
-  useLayoutEffect(() => {
-    const m = ref.current
-    if (!m) return
-    const q = new THREE.Quaternion()
-    const p = new THREE.Vector3()
-    const twist = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2)
-    const s = new THREE.Vector3(L.stretch, 1, 1)
-    const mat = new THREE.Matrix4()
-    for (let i = 0; i < n; i++) {
-      frameAt(ring, (i + 0.5) / n, q, p)
-      if (i % 2) q.multiply(twist) // 一個平放、一個企起，似真鏈
-      m.setMatrixAt(i, mat.compose(p, q, s))
-    }
-    m.instanceMatrix.needsUpdate = true
-    m.computeBoundingSphere()
-  }, [ring, n, L.stretch, geo])
-  return <instancedMesh ref={ref} args={[geo, undefined, n]} material={material(d.base.material)} />
-}
-
-function Beads({ d, ring }: { d: RingDesign; ring: Ring }) {
-  const ref = useRef<THREE.InstancedMesh>(null)
-  const { keep } = beadSlots(d, ring.length / MM)
-  const geo = useMemo(() => new THREE.SphereGeometry((d.base.thickMm / 2) * MM * 0.98, 20, 14), [d.base.thickMm])
-  useEffect(() => () => geo.dispose(), [geo])
-  const key = keep.join(',')
-  useLayoutEffect(() => {
-    const m = ref.current
-    if (!m) return
-    const p = new THREE.Vector3()
-    const mat = new THREE.Matrix4()
-    keep.forEach((t, i) => m.setMatrixAt(i, mat.makeTranslation(ring.pointAt(t, p))))
-    m.instanceMatrix.needsUpdate = true
-    m.computeBoundingSphere()
-  }, [ring, key, geo])
-  return <instancedMesh ref={ref} args={[geo, undefined, Math.max(1, keep.length)]} material={material(d.base.material)} />
-}
 
 function Tube({ d, ring }: { d: RingDesign; ring: Ring }) {
   const geo = useMemo(() => new THREE.TubeGeometry(ring.curve, 240, (d.base.thickMm / 2) * MM, 16, true), [ring, d.base.thickMm])
@@ -115,7 +72,7 @@ function Clasp({ d, ring }: { d: RingDesign; ring: Ring }) {
     return { q, p }
   }, [ring])
   const m = material(claspMaterial(d))
-  const out = d.base.type === 'lace' ? 0.6 : d.base.thickMm / 2
+  const out = baseOutMm(d.base)
   return (
     <group position={p} quaternion={q}>
       <group position={[0, 0, out * MM]}>
@@ -138,6 +95,12 @@ const vDown = new THREE.Vector3(), vN = new THREE.Vector3()
 const vX = new THREE.Vector3(), vY = new THREE.Vector3(), vZ = new THREE.Vector3()
 const plane = new THREE.Plane()
 const hit = new THREE.Vector3()
+/** 配件闊 1 單位時嘅半厚度 × 實際大小（mm） */
+const SHAPE_HALF_D = (c: CharmSpec) => {
+  const g = SHAPE_GEO[c.shape]
+  if (!g.boundingBox) g.computeBoundingBox()
+  return ((g.boundingBox!.max.z - g.boundingBox!.min.z) / 2) * c.sizeMm
+}
 const selMat = new THREE.MeshBasicMaterial({ color: '#ff4f8b', transparent: true, opacity: 0.85, depthTest: false })
 
 function CharmNode({ c, d, ring, zone, root }: {
@@ -151,7 +114,8 @@ function CharmNode({ c, d, ring, zone, root }: {
   const dragging = useRef(false)
   const threaded = isThreaded(c, d.base.type)
   const size = c.sizeMm * MM
-  const out = d.base.type === 'lace' ? 0.8 * MM : (d.base.thickMm / 2) * MM
+  const out = baseOutMm(d.base) * MM
+  const glued = BASES[d.base.type].mount === 'glue' && !threaded
 
   const pos = useMemo(() => {
     const p = ring.pointAt(c.t)
@@ -164,7 +128,7 @@ function CharmNode({ c, d, ring, zone, root }: {
   const vel = useRef(new THREE.Vector3())
   useFrame((_, rawDt) => {
     const g = orient.current
-    if (threaded || !g?.parent) return
+    if (threaded || glued || !g?.parent) return
     const dt = Math.min(rawDt, 1 / 30)
     g.parent.getWorldQuaternion(tmpQ).invert()
     vDown.set(0, -1, 0).applyQuaternion(tmpQ)
@@ -238,6 +202,14 @@ function CharmNode({ c, d, ring, zone, root }: {
           {shape}
           {halo}
         </>
+      ) : glued ? (
+        // 黏喺手環表面：面向外，唔會吊落嚟
+        <group quaternion={frameQuat(frameAtU(ring, c.t))}>
+          <group position={[0, 0, (SHAPE_HALF_D(c) + 0.2) * MM]}>
+            {shape}
+            {halo}
+          </group>
+        </group>
       ) : (
         <group ref={orient}>
           <mesh material={material(jumpRingMaterial(c, d))} position={[0, -1.6 * MM, 0]} rotation={[0, Math.PI / 2, 0]}>
@@ -263,10 +235,15 @@ export function Piece3D({ zone }: { zone: RingZone }) {
   const fit = d?.fit ?? ''
   const ring = useMemo(() => makeRing(len * MM, zone, body, fit), [len, zone, body, fit])
   if (!d) return null
-  const Base = { chain: Chain, beads: Beads, bangle: Tube, cord: Tube, lace: Lace }[d.base.type]
+  const home = JEWELRY[zone].home
+  const Base = {
+    chain: ChainBase, idchain: IdChainBase, tennis: TennisBase, beads: BeadsBase, spiral: SpiralBase,
+    bangle: Tube, hardband: BandBase, cuff: BandBase, silicone: BandBase, strap: BandBase,
+    cord: Tube, braided: BraidedBase, wrap: WrapBase, scrunchie: ScrunchieBase, lace: Lace,
+  }[d.base.type] ?? Tube
   return (
     <group ref={root}>
-      <Base d={d} ring={ring} />
+      <Base d={d} ring={ring} home={home} />
       {BASES[d.base.type].clasp && <Clasp d={d} ring={ring} />}
       {d.charms.map((c) => (
         <CharmNode key={c.id} c={c} d={d} ring={ring} zone={zone} root={root} />

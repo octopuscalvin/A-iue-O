@@ -3,7 +3,7 @@ import { createJSONStorage, persist } from 'zustand/middleware'
 import { storageBackend } from '../store'
 import type { ShapeId } from './charms'
 import {
-  BASES, JEWELRY, SHAPES, newDesign, newId,
+  JEWELRY, SHAPES, defaultBase, newDesign, newId,
   type BaseType, type CharmSpec, type RingDesign, type RingZone,
 } from './types'
 
@@ -45,7 +45,7 @@ export const useDesigns = create<DesignState>()(
             return { designs, selected: null }
           }),
         setBaseType: (z, type) =>
-          edit(z, (d) => ({ ...d, base: { type, material: BASES[type].defMaterial, thickMm: BASES[type].thick.def } })),
+          edit(z, (d) => ({ ...d, base: defaultBase(type) })),
         setBase: (z, patch) => edit(z, (d) => ({ ...d, base: { ...d.base, ...patch } })),
         setFit: (z, fit) => edit(z, (d) => ({ ...d, fit })),
         addCharm: (z, shape) => {

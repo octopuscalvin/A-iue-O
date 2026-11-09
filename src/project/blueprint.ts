@@ -51,7 +51,8 @@ function ringDrawing(d: RingDesign, zone: RingZone, girth: number) {
   for (let r = 0; r < rows; r++) {
     const x0 = 10, y = 12 + r * rowH
     const len = Math.min(ROW, L - r * ROW)
-    if (d.base.type === 'lace') body += `<rect x="${x0}" y="${y - d.base.thickMm / 2}" width="${len}" height="${d.base.thickMm}" fill="${col}" stroke="#999" stroke-width="0.2" opacity="0.8"/>`
+    const bandW = d.base.type === 'lace' ? d.base.thickMm : ['hardband', 'cuff', 'silicone', 'strap'].includes(d.base.type) ? d.base.widthMm ?? 12 : 0
+    if (bandW) body += `<rect x="${x0}" y="${y - bandW / 2}" width="${len}" height="${bandW}" rx="1" fill="${col}" stroke="#999" stroke-width="0.2" opacity="0.85"/>`
     else if (d.base.type === 'beads') {
       const dia = d.base.thickMm
       for (let x = dia / 2; x < len; x += dia) body += `<circle cx="${x0 + x}" cy="${y}" r="${dia / 2 - 0.1}" fill="${col}" stroke="#999" stroke-width="0.2"/>`
@@ -182,7 +183,20 @@ export function buildBlueprint(projectName: string): string {
     const st: string[] = [
       `準備底座：${baseLabel(zone, d.base.type)}（${matName(d.base.material)}，${base.thick.label} ${d.base.thickMm}mm），${j.kind === 'necklace' ? '鏈長' : '內圈長度'} <b>${dr.L.toFixed(0)}mm</b>（${fit.label}）。`,
     ]
-    if (d.base.type === 'beads') st.push(`用彈性水晶線穿底珠，配件珠喺下面位置穿入，最後打結並將結收入珠孔。`)
+    const extra: Partial<Record<string, string>> = {
+      beads: '用彈性水晶線穿底珠（字母珠放喺正中），配件珠喺下面位置穿入，最後打結並將結收入珠孔。',
+      hardband: `按內圈 ${dr.L.toFixed(0)}mm 開模 / 3D 打印硬膠手環，打磨同拋光表面。`,
+      cuff: '整形成 C 形，開口 25mm 放喺手腕內側，邊位打磨圓滑。',
+      silicone: '按內圈開模倒矽膠，凹字喺模具上面做好。',
+      braided: '三股棉繩打辮到所需長度，兩頭重疊做抽繩結（滑結），尾穿尾珠打結。',
+      wrap: `皮繩按圈數剪好（總長見零件清單），兩頭裝按扣。`,
+      strap: '皮帶一頭裝皮帶扣，另一頭打 4 個窿（每個相隔 9mm）。',
+      scrunchie: '布條車成布筒，穿入橡筋，橡筋打結後將布筒縫埋。',
+      spiral: '記憶鋼線剪好圈數，一頭屈圈或者黐尾珠，穿珠後另一頭收尾。',
+      tennis: '逐粒鑲石入爪鑲鏈座，檢查每粒有冇鬆。',
+      idchain: '名牌先刻字，兩邊用開口圈接上側身鏈，鏈尾裝龍蝦扣同扣圈。',
+    }
+    if (extra[d.base.type]) st.push(extra[d.base.type]!)
     else if (base.clasp) st.push(`${d.base.type === 'chain' ? '剪好條鏈' : '剪好長度，兩端裝上夾頭'}，一端裝龍蝦扣、另一端裝扣圈。`)
     else st.push(`將${baseLabel(zone, d.base.type)}整形到內圈 ${dr.L.toFixed(0)}mm。`)
     dr.placed.forEach(({ c, x }, i) => {
